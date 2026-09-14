@@ -111,6 +111,46 @@ because this is the output of a JPEG decoder and a resampler and both may move
 by a bit when Pillow is upgraded. A hand edit moves it much further; a single
 flipped alpha pixel is caught.
 
+## How the studio gets it
+
+Merging to `main` publishes to **GitHub Pages**:
+
+```
+https://kyronlabs.github.io/kyron-artwork/catalogue.json
+```
+
+A stable public URL on a CDN, needing no token — which is what a tool fetching
+a file at runtime requires. Actions artifacts cannot do that job: they need
+authentication to download even from a public repo, they expire, and the id
+changes every run. They are used here for the contact sheet, which is a thing a
+person looks at once, on a pull request.
+
+The studio reads `CATALOGUE_URL` in `src/format/artwork.js`, overridable with
+`KYRON_ARTWORK_CATALOGUE` so a staging build can point elsewhere.
+
+**Two settings have to be right**, and each fails differently:
+
+| | |
+|:--|:--|
+| Settings → Pages → Source → **GitHub Actions** | Without it: *Failed to create deployment (status: 404) … Ensure GitHub Pages has been enabled* |
+| Settings → Environments → **github-pages** → Deployment branches and tags → allow `main` | Without it: *Branch "main" is not allowed to deploy to github-pages due to environment protection rules* |
+
+The second one is worth knowing about, because it is invisible. The
+environment's branch policy is fixed when Pages is first turned on, and it
+names whatever the default branch was *then* — so a repository that started
+life with some other default branch keeps refusing to publish from `main`
+afterwards, and the job that refuses has no log at all: it is rejected before
+a runner is assigned, and the reason is only an annotation.
+
+That is why there is a third CI job. **Publishing and being fetchable are
+different claims**, and the studio depends on the second, so `confirm` asks the
+published URL the way the studio does and compares what comes back with what
+was committed. When publishing fails instead, it says which of the two settings
+is wrong, in the run, rather than leaving a red tick with nothing behind it.
+
+Until publishing works the URL 404s, the studio says so in plain words, and the
+library is empty — so nothing breaks, but nothing appears either.
+
 ## Adding your own
 
 1. Draw it. PNG, RGBA, between 256 and 2048 a side, with a margin so nothing

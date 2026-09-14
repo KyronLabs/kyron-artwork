@@ -132,8 +132,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Before blaming a setting, rule out the catalogue. When `check` fails,
+      # `publish` never runs and is reported as skipped -- which the step
+      # below would otherwise read as "publishing is broken" and send somebody
+      # to Settings over a catalogue this repository itself refused.
+      - name: Say the catalogue never got as far as publishing
+        if: needs.check.result != 'success'
+        run: |
+          echo "Nothing was published because the catalogue did not pass its"
+          echo "own checks. The reason is on the 'Check and render' job; this"
+          echo "is not a Pages problem and there is no setting to change."
+          exit 1
+
       - name: Say why publishing failed, if it did
-        if: needs.publish.result != 'success'
+        if: needs.check.result == 'success' && needs.publish.result != 'success'
         run: |
           echo "The catalogue was built but not published, so the studio's"
           echo "library is still whatever was there before this commit."
@@ -163,6 +175,7 @@ jobs:
           exit 1
 
       - name: The published catalogue is the one in this commit
+        if: needs.check.result == 'success' && needs.publish.result == 'success'
         run: |
           set -uo pipefail
           url="https://kyronlabs.github.io/kyron-artwork/catalogue.json"

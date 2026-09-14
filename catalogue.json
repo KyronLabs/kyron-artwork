@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "artwork": [
+    {
+      "id": "star",
+      "name": "Star",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/star.png",
+      "tags": [
+        "shape",
+        "sparkle",
+        "celebration"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "heart",
+      "name": "Heart",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/heart.png",
+      "tags": [
+        "shape",
+        "love",
+        "reaction"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "halo",
+      "name": "Halo",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/halo.png",
+      "tags": [
+        "shape",
+        "angel",
+        "head"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "sparkle",
+      "name": "Sparkle",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/sparkle.png",
+      "tags": [
+        "shape",
+        "sparkle",
+        "shine"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "crown",
+      "name": "Crown",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/crown.png",
+      "tags": [
+        "shape",
+        "head",
+        "celebration"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "bolt",
+      "name": "Lightning bolt",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/bolt.png",
+      "tags": [
+        "shape",
+        "energy"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "cloud",
+      "name": "Cloud",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/cloud.png",
+      "tags": [
+        "shape",
+        "weather",
+        "sky"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "leaf",
+      "name": "Leaf",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/leaf.png",
+      "tags": [
+        "shape",
+        "nature",
+        "kyron"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "bubble",
+      "name": "Speech bubble",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/bubble.png",
+      "tags": [
+        "shape",
+        "talk"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "flower",
+      "name": "Flower",
+      "url": "https://kyronlabs.github.io/kyron-artwork/art/flower.png",
+      "tags": [
+        "shape",
+        "nature"
+      ],
+      "author": "Kyron",
+      "licence": "CC0-1.0",
+      "width": 512,
+      "height": 512
+    }
+  ]
+}

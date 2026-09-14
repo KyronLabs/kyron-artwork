@@ -1,0 +1,119 @@
+name: catalogue
+
+# Every push and every proposed change. Artwork the studio would fail to load,
+# or that nothing can reach because it is missing from the catalogue, should
+# fail here in front of whoever added it.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check and render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install --quiet pillow numpy
+
+      - name: Every piece is one the studio can use
+        run: python3 tools/art.py check
+
+      # Kyron's own pieces are drawn by tools/art.py rather than committed as
+      # pixels somebody has to take on trust. If redrawing them changes a
+      # file, the committed art and the code that claims to produce it have
+      # come apart, and one of the two is lying.
+      - name: Kyron's own pieces still match the code that draws them
+        run: |
+          set -euo pipefail
+          python3 tools/art.py draw
+          if ! git diff --quiet -- art catalogue.json; then
+            echo "Redrawing changed what is committed:"
+            git diff --stat -- art catalogue.json
+            echo
+            echo "Run: python3 tools/art.py draw -- and commit the result."
+            exit 1
+          fi
+          echo "The committed artwork is what the code draws."
+
+      - name: Render the contact sheet
+        run: python3 tools/art.py sheet -o contact-sheet.png
+
+      # What an Actions artifact is for: something a person wants to look at
+      # on the pull request. Artwork is judged by eye or not at all.
+      - name: Attach the contact sheet for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: contact-sheet
+          path: contact-sheet.png
+          retention-days: 30
+
+      - name: Build the site
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p site
+          cp catalogue.json site/
+          cp contact-sheet.png site/
+          cp -r art site/
+          python3 - <<'PY'
+          import json
+          artwork = json.load(open('catalogue.json'))['artwork']
+          cards = '\n'.join(
+              f'<figure><img src="art/{a["id"]}.png" alt="{a["name"]}">'
+              f'<figcaption><b>{a["name"]}</b><br><code>{a["id"]}</code><br>'
+              f'<small>{a["author"]} · {a["licence"]}</small></figcaption>'
+              f'</figure>' for a in artwork)
+          open('site/index.html', 'w').write(f"""<!doctype html>
+          <meta charset="utf-8"><title>Kyron artwork</title>
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <style>
+            :root {{ color-scheme: light dark; }}
+            body {{ font: 15px/1.6 system-ui, sans-serif; max-width: 60rem;
+                   margin: 3rem auto; padding: 0 1rem; }}
+            .grid {{ display: grid; gap: 1.5rem;
+                    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }}
+            figure {{ margin: 0; text-align: center; }}
+            figure img {{ width: 100%; aspect-ratio: 1; object-fit: contain;
+                         background: #8884; border-radius: 12px; padding: .5rem; }}
+            figcaption {{ margin-top: .5rem; font-size: .85em; }}
+          </style>
+          <h1>Kyron artwork</h1>
+          <p>{len(artwork)} pieces, all CC0 — use them for anything, without
+          asking. The lens studio reads
+          <a href="catalogue.json">catalogue.json</a>; this page is for
+          people.</p>
+          <div class="grid">{cards}</div>
+          """)
+          PY
+
+      - name: Upload the site
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publish:
+    name: Publish the catalogue
+    # The studio fetches from Pages: a stable public URL, on a CDN, that needs
+    # no token. Actions artifacts cannot do that job -- they need
+    # authentication to download and they expire.
+    if: github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

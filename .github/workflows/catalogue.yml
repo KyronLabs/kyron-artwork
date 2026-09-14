@@ -27,22 +27,17 @@ jobs:
       - name: Every piece is one the studio can use
         run: python3 tools/art.py check
 
-      # Kyron's own pieces are drawn by tools/art.py rather than committed as
-      # pixels somebody has to take on trust. If redrawing them changes a
-      # file, the committed art and the code that claims to produce it have
-      # come apart, and one of the two is lying.
-      - name: Kyron's own pieces still match the code that draws them
-        run: |
-          set -euo pipefail
-          python3 tools/art.py draw
-          if ! git diff --quiet -- art catalogue.json; then
-            echo "Redrawing changed what is committed:"
-            git diff --stat -- art catalogue.json
-            echo
-            echo "Run: python3 tools/art.py draw -- and commit the result."
-            exit 1
-          fi
-          echo "The committed artwork is what the code draws."
+      # Kyron's own pieces are cut from the sources committed beside them
+      # rather than from somebody's image editor. If re-cutting produces a
+      # different picture, the committed PNG and the source it claims to come
+      # from have come apart, and one of the two is lying.
+      #
+      # It compares rather than overwrites, and allows a little drift, because
+      # this is the output of a JPEG decoder and a resampler -- both of which
+      # may legitimately move by a bit when Pillow is upgraded. A hand edit
+      # moves it further than that; see DRIFT_MEAN in tools/art.py.
+      - name: Kyron's own pieces still match the sources they were cut from
+        run: python3 tools/art.py cut --verify
 
       - name: Render the contact sheet
         run: python3 tools/art.py sheet -o contact-sheet.png

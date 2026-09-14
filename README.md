@@ -10,7 +10,8 @@ here and the studio offers it.
 |:--|:--|
 | `catalogue.json` | The catalogue. This is what the studio reads. |
 | `art/` | The pieces, as PNGs with an alpha channel. |
-| `tools/art.py` | Draw Kyron's own pieces, check the catalogue, render a contact sheet. |
+| `sources/` | The pictures Kyron's own pieces were cut out of. |
+| `tools/art.py` | Cut Kyron's own pieces, check the catalogue, render a contact sheet. |
 
 ## Why this exists
 
@@ -66,26 +67,55 @@ would resolve against nothing.
 What it cannot check is whether the artwork is yours. That is what the pull
 request template asks, and the answer is taken on trust.
 
-## Kyron's own pieces are drawn, not pasted
+## Kyron's own pieces are cut here, not in an image editor
 
-The ten pieces authored by Kyron are produced by `tools/art.py draw`. A pull
-request that changes the crown shows a diff you can read, and anybody can
-rebuild every one and compare. CI redraws them and fails if a committed file
-and the code that claims to produce it have come apart.
-
-Artwork from anybody else arrives as PNGs, which is the normal case. `draw`
-only ever rewrites the pieces it defines and leaves everything else alone.
+They arrive as renders on a flat plate — black, white, a blue backdrop — and a
+lens needs the picture with the plate gone. `tools/art.py cut` is that step,
+and it lives here rather than in somebody's copy of Photoshop so the result is
+reproducible: the source is committed in `sources/`, anybody can re-cut and
+compare, and CI fails if a committed PNG and the source it claims to come from
+have come apart.
 
 ```bash
-python3 tools/art.py draw       # rewrite Kyron's own pieces
-python3 tools/art.py check      # everything CI checks
-python3 tools/art.py sheet      # a contact sheet to look at
+python3 tools/art.py cut          # re-cut Kyron's own pieces from sources/
+python3 tools/art.py cut --verify # what CI runs: compare, do not overwrite
+python3 tools/art.py check        # everything else CI checks
+python3 tools/art.py sheet        # a contact sheet to look at
 ```
+
+Artwork from anybody else arrives already cut, as a PNG, which is the normal
+case. `cut` only ever rewrites the pieces it lists and leaves everything else
+alone.
+
+### What cutting actually does
+
+Four steps, and each one is there because of something that went wrong
+without it:
+
+1. **Flood fill from the border**, rather than keying on colour. A colour key
+   punches the ghost's eyes out: they are the same black as the plate behind
+   it. Only plate the edge of the picture can reach is plate.
+2. **Undo the blend at the rim.** Edge pixels are part subject and part plate,
+   so they ship as a halo — dark on a black plate, pale on white — unless the
+   blend is reversed.
+3. **Drop everything but the subject.** The diamond came with a stock
+   watermark in the corner; it is a separate island of pixels and it goes.
+4. **Treat a lit plate as plate.** The crown is shot on deep blue with a
+   sparkle over one ball, and the glow lifts the blue far enough from the
+   plate colour that a distance test called it subject — the crown came out
+   wearing a lump of blue. Brightness cannot tell them apart; hue can, and
+   only when the plate is a saturated colour somebody chose.
+
+`--verify` allows a little drift rather than demanding identical bytes,
+because this is the output of a JPEG decoder and a resampler and both may move
+by a bit when Pillow is upgraded. A hand edit moves it much further; a single
+flipped alpha pixel is caught.
 
 ## Adding your own
 
 1. Draw it. PNG, RGBA, between 256 and 2048 a side, with a margin so nothing
-   touches the edge.
+   touches the edge. If it is on a flat background, `tools/art.py` has the
+   cut-out in it — put the source in `sources/` and add it to `PIECES`.
 2. Save it as `art/<id>.png`.
 3. Add an entry to `catalogue.json`.
 4. Run `python3 tools/art.py check`.

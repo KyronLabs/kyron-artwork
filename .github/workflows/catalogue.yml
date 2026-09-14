@@ -112,3 +112,86 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  confirm:
+    name: The studio can actually fetch it
+    # Deploying and being fetchable are different claims, and the studio
+    # depends on the second. `deploy-pages` reporting success means GitHub
+    # accepted a deployment; it does not mean the URL in the studio serves
+    # this commit's catalogue. So this asks the published URL, as the studio
+    # does, and compares what comes back with what was just committed.
+    #
+    # It also runs when publishing failed, which is the other half of why it
+    # is here. That job carries an `environment:`, so when the environment
+    # refuses it the job is rejected before a runner is assigned: no steps, a
+    # log that 404s, and the reason readable only through the check-runs
+    # annotations API. This says it in the run, where somebody is looking.
+    if: always() && github.ref == 'refs/heads/main'
+    needs: [check, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Say why publishing failed, if it did
+        if: needs.publish.result != 'success'
+        run: |
+          echo "The catalogue was built but not published, so the studio's"
+          echo "library is still whatever was there before this commit."
+          echo
+          echo "Publishing needs two settings, and each fails differently:"
+          echo
+          echo "  1. Pages must be on, with Actions as the source."
+          echo "     Settings -> Pages -> Source -> GitHub Actions"
+          echo "     Wrong:  'Failed to create deployment (status: 404) ..."
+          echo "             Ensure GitHub Pages has been enabled'"
+          echo
+          echo "  2. The github-pages environment must let this branch deploy."
+          echo "     Settings -> Environments -> github-pages"
+          echo "       -> Deployment branches and tags"
+          echo "     Wrong:  'Branch \"${GITHUB_REF_NAME}\" is not allowed to deploy"
+          echo "             to github-pages due to environment protection rules'"
+          echo
+          echo "     This one bites when the environment was created while a"
+          echo "     different branch was the default -- the policy still names"
+          echo "     that branch. Add ${GITHUB_REF_NAME}, or set the policy to"
+          echo "     all branches."
+          echo
+          echo "The exact message is on the 'Publish the catalogue' job. That"
+          echo "job has no log when the environment rejects it, because it is"
+          echo "refused before a runner is assigned; the message is then an"
+          echo "annotation, which the job summary shows and the log does not."
+          exit 1
+
+      - name: The published catalogue is the one in this commit
+        run: |
+          set -uo pipefail
+          url="https://kyronlabs.github.io/kyron-artwork/catalogue.json"
+          want=$(sha256sum catalogue.json | cut -d' ' -f1)
+
+          # A deployment is accepted before the CDN serves it. Two minutes is
+          # far longer than it takes and short enough to fail a build rather
+          # than hang one.
+          for attempt in $(seq 1 12); do
+            [ "$attempt" -gt 1 ] && sleep 10
+            curl -fsSL --max-time 20 -o served.json "$url" 2>/dev/null
+            got=$(sha256sum served.json 2>/dev/null | cut -d' ' -f1)
+            if [ "$got" = "$want" ]; then
+              pieces=$(python3 -c "import json;print(len(json.load(open('catalogue.json'))['artwork']))")
+              echo "$url serves this commit's catalogue: $pieces pieces."
+              exit 0
+            fi
+            echo "attempt $attempt: not this commit yet"
+          done
+
+          echo
+          echo "::error::$url did not serve this commit's catalogue within two minutes."
+          echo "Publishing reported success, so this is the gap between a"
+          echo "deployment being accepted and the URL the studio reads serving"
+          echo "it. What the URL answered:"
+          echo
+          # To a file, not down a pipe: `curl | head` kills curl when head
+          # closes the pipe, and the real answer is then buried under
+          # "curl: (23) Failure writing output to destination".
+          curl -sSL --max-time 20 -w '\nHTTP %{http_code}\n' -o answer.txt "$url" || true
+          head -c 2000 answer.txt
+          exit 1
